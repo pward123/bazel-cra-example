@@ -126,7 +126,10 @@ module.exports = {
     // We placed these paths second because we want `node_modules` to "win"
     // if there are any conflicts. This matches Node resolution mechanism.
     // https://github.com/facebook/create-react-app/issues/253
-    modules: ['node_modules'].concat(
+    modules: [
+      path.join(paths.appSrc, '..', '..', 'external', 'npm', 'node_modules'),
+      'node_modules',
+    ].concat(
       // It is guaranteed to exist because we tweak it in `env.js`
       process.env.NODE_PATH.split(path.delimiter).filter(Boolean)
     ),
@@ -177,12 +180,15 @@ module.exports = {
             options: {
               formatter: require.resolve('react-dev-utils/eslintFormatter'),
               eslintPath: require.resolve('eslint'),
-              
+
             },
             loader: require.resolve('eslint-loader'),
           },
         ],
-        include: paths.appSrc,
+        include: [
+          paths.appSrc,
+          '/src/packages/cra-example/src',
+        ],
       },
       {
         // "oneOf" will traverse all following loaders until one will
@@ -204,13 +210,18 @@ module.exports = {
           // The preset includes JSX, Flow, and some ESnext features.
           {
             test: /\.(js|mjs|jsx)$/,
-            include: paths.appSrc,
+            include: [
+              paths.appSrc,
+              '/src/packages/cra-example/src',
+            ],
             loader: require.resolve('babel-loader'),
             options: {
               customize: require.resolve(
                 'babel-preset-react-app/webpack-overrides'
               ),
-              
+              presets: [
+                require('babel-preset-react-app'),
+              ],
               plugins: [
                 [
                   require.resolve('babel-plugin-named-asset-import'),
@@ -226,7 +237,7 @@ module.exports = {
               // This is a feature of `babel-loader` for webpack (not Babel itself).
               // It enables caching results in ./node_modules/.cache/babel-loader/
               // directory for faster rebuilds.
-              cacheDirectory: true,
+              cacheDirectory: false,
               // Don't waste time on Gzipping the cache
               cacheCompression: false,
             },
@@ -247,10 +258,10 @@ module.exports = {
                   { helpers: true },
                 ],
               ],
-              cacheDirectory: true,
+              cacheDirectory: false,
               // Don't waste time on Gzipping the cache
               cacheCompression: false,
-              
+
               // If an error happens in a package, it's possible to be
               // because it was compiled. Thus, we don't want the browser
               // debugger to show the original code. Instead, the code

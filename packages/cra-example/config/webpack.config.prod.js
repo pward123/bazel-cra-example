@@ -110,7 +110,7 @@ module.exports = {
   entry: [paths.appIndexJs],
   output: {
     // The build folder.
-    path: paths.appBuild,
+    path: '/src/packages/cra-example/build/',
     // Generated JS file names (with nested folders).
     // There will be one main bundle, and one file per asynchronous chunk.
     // We don't currently advertise code splitting but Webpack supports it.
@@ -200,7 +200,10 @@ module.exports = {
     // We placed these paths second because we want `node_modules` to "win"
     // if there are any conflicts. This matches Node resolution mechanism.
     // https://github.com/facebook/create-react-app/issues/253
-    modules: ['node_modules'].concat(
+    modules: [
+      path.join(paths.appSrc, '..', '..', 'external', 'npm', 'node_modules'),
+      'node_modules',
+    ].concat(
       // It is guaranteed to exist because we tweak it in `env.js`
       process.env.NODE_PATH.split(path.delimiter).filter(Boolean)
     ),
@@ -251,12 +254,15 @@ module.exports = {
             options: {
               formatter: require.resolve('react-dev-utils/eslintFormatter'),
               eslintPath: require.resolve('eslint'),
-              
+
             },
             loader: require.resolve('eslint-loader'),
           },
         ],
-        include: paths.appSrc,
+        include: [
+          paths.appSrc,
+          '/src/packages/cra-example/src',
+        ],
       },
       {
         // "oneOf" will traverse all following loaders until one will
@@ -277,14 +283,18 @@ module.exports = {
           // The preset includes JSX, Flow, and some ESnext features.
           {
             test: /\.(js|mjs|jsx)$/,
-            include: paths.appSrc,
-
+            include: [
+              paths.appSrc,
+              '/src/packages/cra-example/src',
+            ],
             loader: require.resolve('babel-loader'),
             options: {
               customize: require.resolve(
                 'babel-preset-react-app/webpack-overrides'
               ),
-              
+              presets: [
+                require('babel-preset-react-app'),
+              ],
               plugins: [
                 [
                   require.resolve('babel-plugin-named-asset-import'),
@@ -297,7 +307,7 @@ module.exports = {
                   },
                 ],
               ],
-              cacheDirectory: true,
+              cacheDirectory: false,
               // Save disk space when time isn't as important
               cacheCompression: true,
               compact: true,
@@ -319,10 +329,10 @@ module.exports = {
                   { helpers: true },
                 ],
               ],
-              cacheDirectory: true,
+              cacheDirectory: false,
               // Save disk space when time isn't as important
               cacheCompression: true,
-              
+
               // If an error happens in a package, it's possible to be
               // because it was compiled. Thus, we don't want the browser
               // debugger to show the original code. Instead, the code
