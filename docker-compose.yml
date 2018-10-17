@@ -1,0 +1,45 @@
+version: "2.1"
+
+volumes:
+    bazel_cache:
+    yarn_cache:
+
+services:
+    # our version of running `npm start` inside the packages cra-example folder
+    start:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        ports:
+            - 3000:3000
+        volumes:
+            - ./:/src
+            - bazel_cache:/root/.cache/bazel
+            - yarn_cache:/usr/local/share/.cache/yarn
+        working_dir: /src/packages
+        command: bazel run //cra-example
+
+    # our version of running `npm build` inside the packages cra-example folder
+    build:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        volumes:
+            - ./:/src
+            - bazel_cache:/root/.cache/bazel
+            - yarn_cache:/usr/local/share/.cache/yarn
+        working_dir: /src/packages
+        command: bazel run //cra-example:bundle
+
+    # used for troubleshooting and creating this repo
+    bazel:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        ports:
+            - 3000:3000
+        volumes:
+            - ./:/src
+            - bazel_cache:/root/.cache/bazel
+            - yarn_cache:/usr/local/share/.cache/yarn
+        command: ["/bin/bash", "-c", "echo \"sleeping indefinitely\"; while true; do sleep 100; done"]

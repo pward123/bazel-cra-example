@@ -1,0 +1,142 @@
+#!/bin/bash
+
+#
+# This script was used to create the initial setup for this repository
+#
+
+set -e
+
+APP=${APP:-cra-example}
+WORKSPACE_NAME=${WORKSPACE_NAME:-bazel_cra_example}
+
+[[ "$(uname)" != "Linux" ]] && echo "This should be run inside docker-compose" && exit 1
+
+ORIG_PWD=$(pwd)
+TEMP_FILES=( )
+TEMP_DIRS=( )
+cleanup() {
+    cd "${ORIG_PWD}"
+    rm -f "${TEMP_FILES[@]}"
+    rm -rf "${TEMP_DIRS[@]}"
+}
+trap cleanup 0
+
+CYAN="\e[1;36m"
+NO_COLOR="\e[0m"
+
+log() {
+    printf "\n\t${CYAN}[-] $1${NO_COLOR}\n\n"
+}
+
+RESET_GIT=0
+while getopts ":crvx" opt; do
+    case ${opt} in
+        c ) echo "cleaning"
+            rm -rf "packages/${APP}"
+            # rm -rf "packages/node_modules"
+            rm -f "packages/package.json"
+            rm -f "packages/yarn.lock"
+            rm -f "packages/WORKSPACE"
+            rm -f "scripts/merge"
+            ;;
+        r ) echo "resetting git"
+            RESET_GIT=1
+            rm -rf .git
+            git init
+            git add /src
+            git commit -m "initial commit"
+            ;;
+        v ) set -x
+            ;;
+        x ) exit 0 # for clean and exit. i.e. "setup -cx"
+            ;;
+        \?) echo "Usage: $0 [-c] [-r] [-x]"
+            exit 1
+            ;;
+    esac
+done
+
+[[ -d "packages/${APP}" ]] \
+    && echo "packages/${APP} must not exist" \
+    && exit 1
+
+#
+# Setup workspace file
+#
+sed "s/##WORKSPACE_NAME##/${WORKSPACE_NAME}/g" templates/WORKSPACE.tpl > packages/WORKSPACE
+
+#
+# Inject the workspace name into our merge utility
+#
+sed "s/##WORKSPACE_NAME##/${WORKSPACE_NAME}/g" templates/merge.tpl > scripts/merge
+chmod a+x scripts/merge
+
+#
+# Inject the workspace name into our package.json, create a yarn lock and
+# remove the node_modules byproduct since we're using bazel managed dependencies
+#
+sed "s/##WORKSPACE_NAME##/${WORKSPACE_NAME}/g" templates/package.json.tpl > packages/package.json
+(cd packages && yarn && rm -rf node_modules)
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "injected workspace_name into workspace"
+
+#
+# Create our cra under packages/
+#
+cd packages
+log "calling create-react-app"
+npx create-react-app@2.0.4 "${APP}"
+cd "${APP}"
+rm -rf .git
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "ran npx create-react-app ${APP}"
+
+#
+# eject the app and remove node_modules since we're using bazel managed
+# dependencies
+#
+log "ejecting app"
+echo yes | yarn eject
+rm -rf node_modules
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "ran yarn eject"
+
+#
+# nodejs_binary doesn't use the same cwd as npm run so we'll update the cra
+# scripts to change directories before they do anything else
+#
+log "working around bazel cwd issue"
+declare -a SCRIPTS=("build" "start" "test")
+for SCRIPT in "${SCRIPTS[@]}"; do
+    sed -i "/'use strict';/a \\\n\/\/ fix issue with bazel cwd\\nprocess.chdir(__dirname + '/..');" "scripts/${SCRIPT}.js"
+done
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "patched ${APP} to work around bazel cwd issue"
+
+cd "${ORIG_PWD}"
+scripts/merge "${APP}"
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "merged ${APP} into bazel monorepo"
+
+sed "s/~~PACKAGE_NAME~~/${APP}/g" templates/webpack.config.dev.js.tpl > "packages/${APP}/config/webpack.config.dev.js"
+sed "s/~~PACKAGE_NAME~~/${APP}/g" templates/webpack.config.prod.js.tpl > "packages/${APP}/config/webpack.config.prod.js"
+
+[[ "${RESET_GIT}" -eq "1" ]] \
+    && log "committing changes" \
+    && git add /src \
+    && git commit -m "patched ${APP} to work around webpack/babel issues"
