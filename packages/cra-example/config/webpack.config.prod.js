@@ -110,7 +110,7 @@ module.exports = {
   entry: [paths.appIndexJs],
   output: {
     // The build folder.
-    path: '/src/packages/cra-example/build/',
+    path: path.resolve(process.env.BUILD_WORKSPACE_DIRECTORY, 'cra-example/build/'),
     // Generated JS file names (with nested folders).
     // There will be one main bundle, and one file per asynchronous chunk.
     // We don't currently advertise code splitting but Webpack supports it.
@@ -261,7 +261,7 @@ module.exports = {
         ],
         include: [
           paths.appSrc,
-          '/src/packages/cra-example/src',
+          path.resolve(process.env.BUILD_WORKSPACE_DIRECTORY, 'cra-example/src'),
         ],
       },
       {
@@ -285,7 +285,7 @@ module.exports = {
             test: /\.(js|mjs|jsx)$/,
             include: [
               paths.appSrc,
-              '/src/packages/cra-example/src',
+              path.resolve(process.env.BUILD_WORKSPACE_DIRECTORY, 'cra-example/src'),
             ],
             loader: require.resolve('babel-loader'),
             options: {
