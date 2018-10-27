@@ -187,7 +187,7 @@ module.exports = {
         ],
         include: [
           paths.appSrc,
-          '/src/packages/cra-example/src',
+          path.resolve(process.env.BUILD_WORKSPACE_DIRECTORY, 'cra-example/src'),
         ],
       },
       {
@@ -212,7 +212,7 @@ module.exports = {
             test: /\.(js|mjs|jsx)$/,
             include: [
               paths.appSrc,
-              '/src/packages/cra-example/src',
+              path.resolve(process.env.BUILD_WORKSPACE_DIRECTORY, 'cra-example/src'),
             ],
             loader: require.resolve('babel-loader'),
             options: {
